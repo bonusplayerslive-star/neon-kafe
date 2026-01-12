@@ -199,10 +199,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // 2. Şifre kontrol fonksiyonu
 function checkAdminPass() {
-    const pass = document.getElementById('adminPassInput').value;
-    const ADMIN_SIFRE = "1234"; // Şifren
+   
 
-    if(pass === ADMIN_SIFRE) {
+   if (user === ADMIN_USER && pass === ADMIN_PASS) {
         localStorage.setItem('adminSifre', pass); // Şifreyi tarayıcıya kaydet
         adminPaneliAc();
     } else {

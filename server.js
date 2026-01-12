@@ -1,11 +1,14 @@
 // Path: server.js
+const ADMIN_USER = process.env.ADMIN_USER || ;
+const ADMIN_PASS = process.env.ADMIN_PASS || ;
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const fs = require('fs');
 const path = require('path');
-
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "1234";
 // --- VERİTABANI AYARLARI (Lowdb) ---
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
