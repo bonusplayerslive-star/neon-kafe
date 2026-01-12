@@ -1,4 +1,3 @@
-// Path: views\admin.ejs
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -18,7 +17,6 @@
             --border-color: #222;
         }
 
-        /* --- GİRİŞ PANELİ STİLİ --- */
         #adminLoginOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--dark-bg); z-index: 9999;
@@ -78,6 +76,7 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-6 text-end">
+                    <button onclick="cikisYap()" class="btn btn-outline-info btn-sm me-2">ÇIKIŞ</button>
                     <button onclick="gunuKapat()" class="btn btn-outline-danger font-orbitron btn-sm px-4">
                         <i class="bi bi-power"></i> GÜNÜ KAPAT
                     </button>
@@ -185,47 +184,43 @@
     const socket = io();
     let adisyonModal;
     let seciliMasa = null;
-// admin.ejs içindeki script kısmını bununla değiştir/güncelle
 
-// 1. Sayfa açıldığında hafızada şifre var mı kontrol et
-window.addEventListener('DOMContentLoaded', () => {
-    adisyonModal = new bootstrap.Modal(document.getElementById('adisyonModal'));
-    
-    const kayıtlıSifre = localStorage.getItem('adminSifre');
-    if(kayıtlıSifre === "1234") { // Buradaki şifre senin belirlediğin olmalı
-        adminPaneliAc();
-    }
-});
-
-// 2. Şifre kontrol fonksiyonu
-function checkAdminPass() {
-   
-
-   if (pass === ADMIN_PASS) {
-        localStorage.setItem('adminSifre', pass); // Şifreyi tarayıcıya kaydet
-        adminPaneliAc();
-    } else {
-        document.getElementById('loginError').style.display = 'block';
-    }
-}
-
-// 3. Paneli açan ortak fonksiyon
-function adminPaneliAc() {
-    document.getElementById('adminLoginOverlay').style.display = 'none';
-    document.getElementById('adminMainContent').style.display = 'block';
-    socket.emit('admin_giris');
-}
-
-// 4. (İsteğe bağlı) Çıkış yap butonu eklersen bunu kullanırsın
-function cikisYap() {
-    localStorage.removeItem('adminSifre');
-    location.reload();
-}
+    // --- ÖNEMLİ: Sunucudaki şifreyi buraya aktarıyoruz ---
+    const GERCEK_SIFRE = "<%= typeof adminPass !== 'undefined' ? adminPass : '12345' %>";
 
     window.addEventListener('DOMContentLoaded', () => {
         adisyonModal = new bootstrap.Modal(document.getElementById('adisyonModal'));
+        
+        // Hafızada şifre varsa otomatik gir
+        const kayitliSifre = localStorage.getItem('adminSifre');
+        if(kayitliSifre === GERCEK_SIFRE) {
+            adminPaneliAc();
+        }
     });
 
+    function checkAdminPass() {
+        const girilenSifre = document.getElementById('adminPassInput').value;
+        
+        if (girilenSifre === GERCEK_SIFRE) {
+            localStorage.setItem('adminSifre', girilenSifre);
+            adminPaneliAc();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function adminPaneliAc() {
+        document.getElementById('adminLoginOverlay').style.display = 'none';
+        document.getElementById('adminMainContent').style.display = 'block';
+        socket.emit('admin_giris');
+    }
+
+    function cikisYap() {
+        localStorage.removeItem('adminSifre');
+        location.reload();
+    }
+
+    // --- SOCKET VE DİĞER FONKSİYONLAR ---
     socket.on('rakamGuncelleme', (data) => {
         document.getElementById('toplam-ciro').innerText = data.ciro.toFixed(2) + " TL";
         document.getElementById('toplam-kar').innerText = data.kar.toFixed(2) + " TL";
@@ -299,7 +294,6 @@ function cikisYap() {
 
     socket.on('masa_sifirla', (masaNo) => {
         document.getElementById(`masa-${masaNo}`)?.classList.remove('dolu');
-        // O masanın mutfaktaki siparişlerini de temizle
         const mutfakSiparisleri = document.querySelectorAll(`.siparis-item`);
         mutfakSiparisleri.forEach(item => {
             if(item.innerText.includes(`MASA ${masaNo}`)) item.remove();
