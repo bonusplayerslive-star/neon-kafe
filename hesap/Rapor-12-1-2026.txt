@@ -1,0 +1,27 @@
+--- GÜN SONU RAPORU ---
+
+[01:15:34] Masa 7: köfte | 100 TL
+[01:15:38] Masa 5: köfte | 100 TL
+[01:15:41] Masa 3: çay | 15 TL
+[01:15:41] Masa 3: asd | 11 TL
+[01:15:41] Masa 3: soda | 20 TL
+[01:15:41] Masa 3: ŞEFTALİ SUYU | 111 TL
+[01:15:41] Masa 3: ŞEFTALİ SUYU | 111 TL
+[01:15:43] Masa 2: köfte | 100 TL
+[01:16:21] Masa 9: çay | 15 TL
+[01:16:21] Masa 9: kola | 50 TL
+[01:16:21] Masa 9: köfte | 100 TL
+[01:24:43] Masa 9: ŞEFTALİ SUYU | 111 TL
+[01:24:43] Masa 9: köfte | 100 TL
+[01:24:43] Masa 9: soda | 20 TL
+[01:26:04] Masa 9: köfte | 55 TL
+[06:58:19] Masa 9: köfte | 55 TL
+[06:58:19] Masa 9: köfte | 55 TL
+[07:02:26] Masa 9: köfte | 55 TL
+[07:09:40] Masa 9: köfte | 55 TL
+[07:17:20] Masa 9: köfte | 55 TL
+[07:17:20] Masa 9: köfte | 55 TL
+[07:17:20] Masa 9: köfte | 55 TL
+
+TOPLAM CİRO: 1404.00 TL
+TOPLAM KAR: 584.00 TL

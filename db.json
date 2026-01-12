@@ -1,0 +1,20 @@
+{
+  "urunler": [
+    {
+      "id": "1768170329658",
+      "ad": "köfte",
+      "fiyat": 55,
+      "maliyet": 23,
+      "stok": 13
+    },
+    {
+      "id": "1768191538049",
+      "ad": "kola",
+      "fiyat": 50,
+      "maliyet": 36,
+      "stok": 22
+    }
+  ],
+  "siparisler": [],
+  "raporlar": []
+}

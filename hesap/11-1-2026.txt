@@ -1,0 +1,27 @@
+--- KAFE GÜN SONU ---
+
+[23:39:01] Masa 11: soda | 20 TL
+[23:38:59] Masa 11: asd | 11 TL
+[23:38:53] Masa 5: çay | 15 TL
+[23:38:51] Masa 5: ŞEFTALİ SUYU | 111 TL
+[23:38:48] Masa 5: soda | 20 TL
+[23:40:02] Masa 15: çay | 15 TL
+[23:39:52] Masa 1: köfte | 100 TL
+[23:39:50] Masa 1: ŞEFTALİ SUYU | 111 TL
+[23:39:43] Masa 15: ŞEFTALİ SUYU | 111 TL
+[23:39:41] Masa 15: çay | 15 TL
+[23:39:35] Masa 11: asd | 11 TL
+[23:39:33] Masa 11: köfte | 100 TL
+[23:39:31] Masa 11: çay | 15 TL
+[23:39:29] Masa 11: soda | 20 TL
+[23:46:12] Masa 15: kola | 50 TL
+[23:49:05] Masa 15: köfte | 100 TL
+[23:49:19] Masa 15: çay | 15 TL
+[23:52:24] Masa 13: tost | 50 TL
+[23:52:26] Masa 13: çay | 15 TL
+[23:52:46] Masa 15: soda | 20 TL
+[23:53:36] Masa 17: tost | 50 TL
+[23:53:14] Masa 15: kola | 50 TL
+
+TOPLAM CİRO: 1025 TL
+TOPLAM KAR: 450 TL

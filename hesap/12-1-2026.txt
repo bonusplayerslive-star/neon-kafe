@@ -1,0 +1,21 @@
+--- KAFE GÜN SONU ---
+
+[23:55:01] Masa 17: çay | 15 TL
+[undefined] Masa undefined: undefined | 111 TL
+[00:13:28] Masa 17: soda | 20 TL
+[00:13:31] Masa 18: çay | 15 TL
+[00:13:34] Masa 16: çay | 15 TL
+[00:13:34] Masa 16: kola | 50 TL
+[00:29:29] Masa 18: çay | 15 TL
+[00:29:29] Masa 18: soda | 20 TL
+[00:29:31] Masa 16: kola | 50 TL
+[00:39:18] Masa 29: tost | 50 TL
+[00:39:18] Masa 29: çay | 15 TL
+[00:39:18] Masa 29: kola | 50 TL
+[00:39:18] Masa 29: soda | 20 TL
+[00:39:27] Masa 1: çay | 15 TL
+[00:39:27] Masa 1: soda | 20 TL
+[00:39:31] Masa 25: ŞEFTALİ SUYU | 111 TL
+
+TOPLAM CİRO: 592 TL
+TOPLAM KAR: 332 TL

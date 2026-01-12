@@ -1,0 +1,306 @@
+// Path: views\menu.ejs
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Menü | Sipariş</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-turkuaz: #00f2ff;
+            --neon-shadow: 0 0 10px #00f2ff, 0 0 20px rgba(0, 242, 255, 0.5);
+            --dark-bg: #000000;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            font-family: 'Rajdhani', sans-serif;
+            padding-bottom: 120px; 
+            overflow-x: hidden;
+        }
+
+        .neon-header {
+            text-align: center;
+            padding: 30px 10px;
+            border-bottom: 2px solid var(--neon-turkuaz);
+            background: linear-gradient(180deg, #111 0%, #000 100%);
+            box-shadow: 0 5px 20px rgba(0, 242, 255, 0.2);
+        }
+
+        .kafe-ad {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--neon-turkuaz);
+            text-shadow: var(--neon-shadow);
+            letter-spacing: 3px;
+        }
+
+        .category-title {
+            color: var(--neon-turkuaz);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            margin: 25px 0 15px 15px;
+            border-left: 4px solid var(--neon-turkuaz);
+            padding-left: 10px;
+        }
+
+        .product-card {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 15px;
+            margin: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
+        }
+
+        .product-card:active { transform: scale(0.96); background: #1a1a1a; }
+
+        .add-btn {
+            background: transparent;
+            border: 2px solid var(--neon-turkuaz);
+            color: var(--neon-turkuaz);
+            border-radius: 12px;
+            padding: 6px 18px;
+            font-weight: bold;
+            box-shadow: 0 0 5px var(--neon-turkuaz);
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 15px;
+            right: 15px;
+            background: rgba(0, 242, 255, 0.95);
+            color: #000;
+            border-radius: 20px;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 900;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.5);
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .modal-content {
+            background: #0d0d0d;
+            border: 2px solid var(--neon-turkuaz);
+            color: white;
+            border-radius: 25px;
+        }
+
+        .sepet-item {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-sil {
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+            background: transparent;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="neon-header">
+    <div class="kafe-ad">NEON CAFE</div>
+    <span class="badge bg-light text-dark mt-2">MASA: <%= masaNo %></span>
+</div>
+
+<div class="container mt-3">
+    <div class="category-title">MENÜ ÜRÜNLERİ</div>
+    
+    <div id="urun-listesi">
+        <% if(typeof urunler !== 'undefined' && urunler.length > 0) { %>
+            <% urunler.forEach(urun => { %>
+                <div class="product-card shadow-sm">
+                    <div>
+                        <span class="d-block fw-bold fs-5 text-white"><%= urun.ad %></span>
+                        <span class="text-info fs-6 fw-bold"><%= urun.fiyat %> TL</span>
+                    </div>
+                    <button class="add-btn" onclick="sepeteEkle('<%= urun.ad %>', <%= urun.fiyat %>)">
+                        + EKLE
+                    </button>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="text-center opacity-50 mt-5">Henüz ürün eklenmemiş...</div>
+        <% } %>
+    </div>
+</div>
+
+<div class="bottom-bar shadow-lg" id="cart-bar" style="display: none;" onclick="sepetiGoster()">
+    <span><i class="bi bi-cart-fill"></i> <span id="sepet-sayi">0</span> ÜRÜN</span>
+    <span>TOPLAM: <span id="total-price">0</span> TL <i class="bi bi-chevron-right"></i></span>
+</div>
+
+<div class="modal fade" id="sepetModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold" style="color: var(--neon-turkuaz)">SİPARİŞ ÖZETİ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="sepet-listesi">
+                    </div>
+                <div class="d-flex justify-content-between mt-4 px-2">
+                    <span class="fs-5 fw-bold">TOPLAM:</span>
+                    <span class="fs-4 fw-bold text-info"><span id="modal-total">0</span> TL</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 flex-column">
+                <button class="btn btn-info w-100 fw-bold py-3 mb-2" onclick="siparisOnayla()">
+                    SİPARİŞİ MUTFAĞA GÖNDER
+                </button>
+                <button class="btn btn-outline-light w-100" data-bs-dismiss="modal">
+                    EKLEMEYE DEVAM ET
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const socket = io();
+    let sepet = [];
+    const sepetModalElement = document.getElementById('sepetModal');
+    const modalKontrol = new bootstrap.Modal(sepetModalElement);
+
+    function sepeteEkle(ad, fiyat) {
+        // ID'yi string yapalım ki silme işleminde hata çıkmasın
+        const urun = { id: (Date.now() + Math.random()).toString(), ad, fiyat };
+        sepet.push(urun);
+        uiGuncelle();
+        
+        if(navigator.vibrate) navigator.vibrate(40);
+    }
+
+    function sepettenSil(id) {
+        // ID kontrolünü string olarak yapıyoruz
+        sepet = sepet.filter(item => item.id !== id.toString());
+        uiGuncelle();
+        
+        if(sepet.length === 0) {
+            modalKontrol.hide();
+        } else {
+            sepetiGoster(); 
+        }
+    }
+
+    function uiGuncelle() {
+        const bar = document.getElementById('cart-bar');
+        const sayi = document.getElementById('sepet-sayi');
+        const toplam = document.getElementById('total-price');
+        
+        if(sepet.length > 0) {
+            bar.style.display = 'flex';
+            sayi.innerText = sepet.length;
+            let total = sepet.reduce((a, b) => a + b.fiyat, 0);
+            toplam.innerText = total.toFixed(2);
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function sepetiGoster() {
+        const liste = document.getElementById('sepet-listesi');
+        const modalTotal = document.getElementById('modal-total');
+        liste.innerHTML = "";
+        
+        sepet.forEach(item => {
+            // item.id'yi tek tırnak içine alarak gönderiyoruz
+            liste.innerHTML += `
+                <div class="sepet-item shadow">
+                    <div>
+                        <div class="fw-bold text-white">${item.ad}</div>
+                        <div class="small text-info">${item.fiyat.toFixed(2)} TL</div>
+                    </div>
+                    <button class="btn-sil" onclick="sepettenSil('${item.id}')">SİL</button>
+                </div>`;
+        });
+
+        let total = sepet.reduce((a, b) => a + b.fiyat, 0);
+        modalTotal.innerText = total.toFixed(2);
+        modalKontrol.show();
+    }
+
+    function siparisOnayla() {
+        if(sepet.length === 0) return;
+
+        const masaNo = "<%= masaNo %>";
+        
+        socket.emit('yeni_siparis', {
+            masa: masaNo,
+            urunler: sepet
+        });
+        
+        modalKontrol.hide();
+        sepet = [];
+        uiGuncelle();
+
+        // Müşteriye bildirim verelim
+        alert("Siparişiniz mutfağa iletildi! Afiyet olsun.");
+    }
+
+    // --- KONUM KONTROLÜ (Aynen Kalabilir, Harika Yazmışsın) ---
+    function konumKontrol() {
+        if (!navigator.geolocation) return;
+
+        navigator.geolocation.getCurrentPosition(pos => {
+            const musteriEnlem = pos.coords.latitude;
+            const musteriBoylam = pos.coords.longitude;
+            const kafeEnlem = 37.57814; 
+            const kafeBoylam = 32.77271;
+            
+            const mesafe = getDistance(musteriEnlem, musteriBoylam, kafeEnlem, kafeBoylam);
+            
+            if (mesafe > 50) { 
+                document.body.innerHTML = `
+                    <div style="text-align:center; padding:50px; background:#000; height:100vh; color:white; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:sans-serif;">
+                        <h2 style="color:#00f2ff;">KAPSAMA ALANI DIŞI</h2>
+                        <p>Şu anki mesafeniz: ${Math.round(mesafe)} metre. Sipariş için kafeye gelmelisiniz.</p>
+                        <button onclick="location.reload()" style="background:#00f2ff; padding:10px 20px; border-radius:10px; border:none; margin-top:15px;">Tekrar Dene</button>
+                    </div>`;
+            }
+        }, err => {
+            console.log("Konum hatası:", err);
+        }, { enableHighAccuracy: true });
+    }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    window.onload = konumKontrol;
+</script>
+
+</body>
+</html>
