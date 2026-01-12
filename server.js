@@ -1,6 +1,6 @@
 // Path: server.js
-const ADMIN_USER = process.env.ADMIN_USER || ;
-const ADMIN_PASS = process.env.ADMIN_PASS || ;
+
+onst ADMIN_PASS = process.env.ADMIN_PASS || '12345';
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
