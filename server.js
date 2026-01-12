@@ -39,13 +39,20 @@ function rakamlariGuncelle() {
 }
 
 // --- ROTALAR ---
-app.get('/admin', (req, res) => res.redirect('/admin'));
+// ANA SAYFA ( Doğrudan menüyü yükler )
+app.get('/', (req, res) => {
+    const tumUrunler = db.get('urunler').value();
+    const gecerliUrunler = tumUrunler.filter(u => u.ad && u.fiyat > 0);
+    // Masa numarası belirtilmediği için varsayılan olarak 'Genel' veya '0' gönderilebilir
+    res.render('menu', { masaNo: '0', urunler: gecerliUrunler });
+});
 
+// ADMİN SAYFASI ( Mevcut kodunuzu koruyun veya buna göre güncelleyin )
 app.get('/admin', (req, res) => {
     const urunler = db.get('urunler').value();
     const siparisler = db.get('siparisler').value();
-    adminPass: process.env.ADMIN_PASS || '12345';
-    res.render('admin', { urunler, siparisler });
+    const adminPass = process.env.ADMIN_PASS || '12345';
+    res.render('admin', { urunler, siparisler, adminPass });
 });
 
 app.get('/menu/:masaNo', (req, res) => {
