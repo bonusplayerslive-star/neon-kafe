@@ -39,11 +39,12 @@ function rakamlariGuncelle() {
 }
 
 // --- ROTALAR ---
-app.get('/', (req, res) => res.redirect('/admin'));
+app.get('/admin', (req, res) => res.redirect('/admin'));
 
 app.get('/admin', (req, res) => {
     const urunler = db.get('urunler').value();
     const siparisler = db.get('siparisler').value();
+    adminPass: process.env.ADMIN_PASS || '12345';
     res.render('admin', { urunler, siparisler });
 });
 
