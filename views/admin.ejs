@@ -181,19 +181,35 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+  <script>
     const socket = io();
     let adisyonModal;
     let seciliMasa = null;
 
-    // --- ÖNEMLİ: Sunucudaki şifreyi buraya aktarıyoruz ---
-    const GERCEK_SIFRE = "<%= typeof adminPass !== 'undefined' ? adminPass : '12345' %>";
+    // --- DOĞRU TANIMLAMA: Sunucudan gelen şifreyi sabit bir değişkene atıyoruz ---
+    const ADMIN_PASS = "<%= typeof adminPass !== 'undefined' ? adminPass : '12345' %>";
+
+    // ESKİ VE HATALI OLAN İKİNCİ 'checkAdminPass' FONKSİYONUNU SİLİN!
+    // SADECE AŞAĞIDAKİ TEK FONKSİYON KALSIN:
+
+    function checkAdminPass() {
+        // Doğru input ID'si: 'adminPassInput' (HTML kısmında öyle tanımlamışsın)
+        const girilenSifre = document.getElementById('adminPassInput').value; 
+        
+        if (girilenSifre === ADMIN_PASS) {
+            localStorage.setItem('adminSifre', girilenSifre);
+            adminPaneliAc();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
         adisyonModal = new bootstrap.Modal(document.getElementById('adisyonModal'));
         
-        // Hafızada şifre varsa otomatik gir
+        // Sayfa yüklendiğinde hafızadaki şifreyi kontrol et
         const kayitliSifre = localStorage.getItem('adminSifre');
-        if(kayitliSifre === GERCEK_SIFRE) {
+        if(kayitliSifre === ADMIN_PASS) {
             adminPaneliAc();
         }
     });
