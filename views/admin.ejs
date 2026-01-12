@@ -201,7 +201,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function checkAdminPass() {
    
 
-   if (user === ADMIN_USER && pass === ADMIN_PASS) {
+   if (pass === ADMIN_PASS) {
         localStorage.setItem('adminSifre', pass); // Şifreyi tarayıcıya kaydet
         adminPaneliAc();
     } else {
