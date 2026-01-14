@@ -271,12 +271,12 @@
         navigator.geolocation.getCurrentPosition(pos => {
             const musteriEnlem = pos.coords.latitude;
             const musteriBoylam = pos.coords.longitude;
-            const kafeEnlem = 37.57814; 
-            const kafeBoylam = 32.77271;
+            const kafeEnlem =  37.57299368769208; 
+            const kafeBoylam = 32.768404552114255;
             
             const mesafe = getDistance(musteriEnlem, musteriBoylam, kafeEnlem, kafeBoylam);
             
-            if (mesafe > 50) { 
+            if (mesafe > 60) { 
                 document.body.innerHTML = `
                     <div style="text-align:center; padding:50px; background:#000; height:100vh; color:white; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:sans-serif;">
                         <h2 style="color:#00f2ff;">KAPSAMA ALANI DIŞI</h2>
