@@ -1,164 +1,171 @@
 // Path: server.js
-
-const ADMIN_PASS = process.env.ADMIN_PASS || '12345';
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const fs = require('fs');
+const mongoose = require('mongoose');
 const path = require('path');
+const fs = require('fs');
+const { Urun, Siparis, Rapor } = require('./models/Kafe'); // Model dosyanız
 
-// --- VERİTABANI AYARLARI (Lowdb) ---
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
-const adapter = new FileSync('db.json');
-const db = low(adapter);
+// --- AYARLAR ---
+const ADMIN_PASS = process.env.ADMIN_PASS || '12345';
+const MONGO_URI = "mongodb+srv://bonusplayerslive_db_user:1nB1QyAsh3qVafpE@bonus.x39zlzq.mongodb.net/NeonKafe?retryWrites=true&w=majority";
 
-// Veritabanı Varsayılan Yapısı
-db.defaults({ urunler: [], siparisler: [], raporlar: [] }).write();
+// --- MONGODB BAĞLANTISI ---
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("✅ MongoDB Atlas Bağlantısı Başarılı"))
+    .catch(err => console.error("❌ Veritabanı Hatası:", err));
 
 app.set('view engine', 'ejs');
-
-// --- MIDDLEWARE ---
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- YARDIMCI FONKSİYONLAR ---
-function rakamlariGuncelle() {
-    const raporlar = db.get('raporlar').value() || [];
-    let toplamCiro = 0;
-    let toplamKar = 0;
+async function rakamlariGuncelle() {
+    try {
+        const raporlar = await Rapor.find();
+        let toplamCiro = 0;
+        let toplamKar = 0;
 
-    raporlar.forEach(r => {
-        toplamCiro += parseFloat(r.tutar || 0);
-        toplamKar += parseFloat(r.kar || 0);
-    });
+        raporlar.forEach(r => {
+            toplamCiro += parseFloat(r.tutar || 0);
+            toplamKar += parseFloat(r.kar || 0);
+        });
 
-    io.emit('rakamGuncelleme', { ciro: toplamCiro, kar: toplamKar });
+        io.emit('rakamGuncelleme', { ciro: toplamCiro, kar: toplamKar });
+    } catch (err) {
+        console.error("Rakam güncelleme hatası:", err);
+    }
 }
 
 // --- ROTALAR ---
-// ANA SAYFA ( Doğrudan menüyü yükler )
-app.get('/', (req, res) => {
-    const tumUrunler = db.get('urunler').value();
-    const gecerliUrunler = tumUrunler.filter(u => u.ad && u.fiyat > 0);
-    // Masa numarası belirtilmediği için varsayılan olarak 'Genel' veya '0' gönderilebilir
-    res.render('menu', { masaNo: '0', urunler: gecerliUrunler });
+
+// Ana Sayfa ve Masa Menüsü
+app.get(['/', '/menu/:masaNo'], async (req, res) => {
+    try {
+        const masaNo = req.params.masaNo || '0';
+        const gecerliUrunler = await Urun.find({ stok: { $gt: 0 } });
+        res.render('menu', { masaNo, urunler: gecerliUrunler });
+    } catch (err) {
+        res.status(500).send("Sunucu Hatası");
+    }
 });
 
-// ADMİN SAYFASI ( Mevcut kodunuzu koruyun veya buna göre güncelleyin )
-app.get('/admin', (req, res) => {
-    const urunler = db.get('urunler').value();
-    const siparisler = db.get('siparisler').value();
-    const adminPass = process.env.ADMIN_PASS || '12345';
-    res.render('admin', { urunler, siparisler, adminPass });
+// Admin Paneli
+app.get('/admin', async (req, res) => {
+    try {
+        const urunler = await Urun.find();
+        const siparisler = await Siparis.find();
+        res.render('admin', { urunler, siparisler, adminPass: ADMIN_PASS });
+    } catch (err) {
+        res.status(500).send("Admin Paneli Hatası");
+    }
 });
 
-app.get('/menu/:masaNo', (req, res) => {
-    const tumUrunler = db.get('urunler').value();
-    const gecerliUrunler = tumUrunler.filter(u => u.ad && u.fiyat > 0);
-    res.render('menu', { masaNo: req.params.masaNo, urunler: gecerliUrunler });
-});
-
-app.post('/admin/urun-ekle', (req, res) => {
+// Ürün Ekleme (Admin)
+app.post('/admin/urun-ekle', async (req, res) => {
     const { ad, fiyat, maliyet, stok } = req.body;
     if (!ad) return res.redirect('/admin');
-    db.get('urunler').push({ 
-        id: Date.now().toString(), 
-        ad: ad, 
-        fiyat: parseFloat(fiyat) || 0, 
-        maliyet: parseFloat(maliyet) || 0, 
-        stok: parseInt(stok) || 0 
-    }).write();
-    res.redirect('/admin');
+
+    try {
+        await Urun.create({
+            ad,
+            fiyat: parseFloat(fiyat) || 0,
+            maliyet: parseFloat(maliyet) || 0,
+            stok: parseInt(stok) || 0
+        });
+        res.redirect('/admin');
+    } catch (err) {
+        console.error("Ürün ekleme hatası:", err);
+        res.redirect('/admin');
+    }
 });
 
 // --- SOCKET.IO İLETİŞİMİ ---
 io.on('connection', (socket) => {
-    
-    // Admin girişi
-    socket.on('admin_giris', () => {
-        rakamlariGuncelle();
-        const aktifler = db.get('siparisler').value() || [];
-        aktifler.forEach(s => socket.emit('yeniSiparisBildirimi', s));
+
+    socket.on('admin_giris', async () => {
+        await rakamlariGuncelle();
+        const aktifler = await Siparis.find();
         
+        aktifler.forEach(s => socket.emit('yeniSiparisBildirimi', s));
+
         const doluMasalar = [...new Set(aktifler.map(s => s.masaNo))];
         doluMasalar.forEach(mNo => {
             socket.emit('masa_durum_guncelle', { masaNo: mNo, durum: 'dolu' });
         });
     });
 
-    // Ürün Silme
-    socket.on('urun_sil', (id) => {
-        db.get('urunler').remove({ id: id }).write();
+    socket.on('urun_sil', async (id) => {
+        await Urun.findByIdAndDelete(id);
     });
 
-    // Stok Güncelleme
-    socket.on('stok_guncelle', (data) => {
-        db.get('urunler').find({ id: data.id }).assign({ stok: data.stok }).write();
+    socket.on('stok_guncelle', async (data) => {
+        await Urun.findByIdAndUpdate(data.id, { stok: data.stok });
     });
 
-    // Müşteriden gelen sipariş
-    socket.on('yeni_siparis', (data) => {
+    socket.on('yeni_siparis', async (data) => {
         const { masa, urunler: sepet } = data;
-        
-        sepet.forEach(item => {
-            const urunDb = db.get('urunler').find({ ad: item.ad }).value();
+
+        for (const item of sepet) {
+            const urunDb = await Urun.findOne({ ad: item.ad });
             if (urunDb) {
+                // Stok düşür
                 if (urunDb.stok > 0) {
-                    db.get('urunler').find({ ad: item.ad }).assign({ stok: urunDb.stok - 1 }).write();
+                    urunDb.stok -= 1;
+                    await urunDb.save();
                 }
 
-                const yeniSiparis = { 
-                    id: (Date.now() + Math.random()).toString(), 
-                    masaNo: masa, 
+                const yeniSiparis = await Siparis.create({
+                    masaNo: masa,
                     urunAd: item.ad,
                     fiyat: urunDb.fiyat,
                     maliyet: urunDb.maliyet,
                     zaman: new Date().toLocaleTimeString('tr-TR'),
                     durum: 'bekliyor'
-                };
+                });
 
-                db.get('siparisler').push(yeniSiparis).write();
                 io.emit('yeniSiparisBildirimi', yeniSiparis);
                 io.emit('masa_durum_guncelle', { masaNo: masa, durum: 'dolu' });
             }
-        });
+        }
     });
 
-    socket.on('siparis_teslim_edildi', (id) => {
-        db.get('siparisler').find({ id: id }).assign({ durum: 'teslim_edildi' }).write();
+    socket.on('siparis_teslim_edildi', async (id) => {
+        await Siparis.findByIdAndUpdate(id, { durum: 'teslim_edildi' });
     });
 
-    socket.on('masa_detay_iste', (masaNo) => {
-        const masaninSiparisleri = db.get('siparisler').filter({ masaNo: masaNo.toString() }).value();
+    socket.on('masa_detay_iste', async (masaNo) => {
+        const masaninSiparisleri = await Siparis.find({ masaNo: masaNo.toString() });
         socket.emit('masa_detay_verisi', { masaNo, siparisler: masaninSiparisleri });
     });
 
-    socket.on('hesap_kapat', (masaNo) => {
-        const masaninSiparisleri = db.get('siparisler').filter({ masaNo: masaNo.toString() }).value();
+    socket.on('hesap_kapat', async (masaNo) => {
+        const masaninSiparisleri = await Siparis.find({ masaNo: masaNo.toString() });
+        
         if (masaninSiparisleri.length > 0) {
-            masaninSiparisleri.forEach(s => {
-                db.get('raporlar').push({
+            for (const s of masaninSiparisleri) {
+                await Rapor.create({
                     tarih: new Date().toLocaleDateString('tr-TR'),
                     saat: new Date().toLocaleTimeString('tr-TR'),
                     masa: s.masaNo,
                     urun: s.urunAd,
                     tutar: parseFloat(s.fiyat),
                     kar: parseFloat(s.fiyat) - parseFloat(s.maliyet || 0)
-                }).write();
-            });
-            db.get('siparisler').remove({ masaNo: masaNo.toString() }).write();
-            rakamlariGuncelle();
+                });
+            }
+            await Siparis.deleteMany({ masaNo: masaNo.toString() });
+            await rakamlariGuncelle();
             io.emit('masa_sifirla', masaNo);
             io.emit('masa_durum_guncelle', { masaNo: masaNo, durum: 'bos' });
         }
     });
 
-    socket.on('gunu_kapat', () => {
-        const tumRaporlar = db.get('raporlar').value();
-        if (!tumRaporlar || tumRaporlar.length === 0) return;
+    socket.on('gunu_kapat', async () => {
+        const tumRaporlar = await Rapor.find();
+        if (tumRaporlar.length === 0) return;
 
         const simdi = new Date();
         const dosyaAdi = `Rapor-${simdi.getDate()}-${simdi.getMonth() + 1}-${simdi.getFullYear()}.txt`;
@@ -168,22 +175,27 @@ io.on('connection', (socket) => {
 
         let icerik = `--- GÜN SONU RAPORU ---\n\n`;
         let ciro = 0, kar = 0;
+        
         tumRaporlar.forEach(r => {
             icerik += `[${r.saat}] Masa ${r.masa}: ${r.urun} | ${r.tutar} TL\n`;
-            ciro += r.tutar; kar += r.kar;
+            ciro += r.tutar; 
+            kar += r.kar;
         });
+        
         icerik += `\nTOPLAM CİRO: ${ciro.toFixed(2)} TL\nTOPLAM KAR: ${kar.toFixed(2)} TL`;
 
         fs.writeFileSync(path.join(klasorYolu, dosyaAdi), icerik);
-        db.set('raporlar', []).write();
-        db.set('siparisler', []).write();
-        rakamlariGuncelle();
+        
+        // Verileri temizle
+        await Rapor.deleteMany({});
+        await Siparis.deleteMany({});
+        
+        await rakamlariGuncelle();
         io.emit('gun_kapatildi_onayi');
         io.emit('tum_masalari_temizle');
     });
 });
 
-// --- RENDER PORT AYARI ---
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
     console.log(`🚀 Sistem Hazır: Port ${PORT}`);
