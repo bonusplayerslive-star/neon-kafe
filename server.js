@@ -11,7 +11,7 @@ const { Urun, Siparis, Rapor } = require('./models/Kafe'); // Model dosyanız
 const ADMIN_PASS = process.env.ADMIN_PASS || '12345';
 
 // Senin yeni oluşturduğun neon_admin kullanıcısı ve şifresiyle güncellenmiş adres
-const MONGO_URI = "mongodb+srv://neon_admin:Kafe2026@bonus.x39zlzq.mongodb.net/NeonKafe?retryWrites=true&w=majority";
+cconst MONGO_URI = "mongodb+srv://neon_admin:Kafe2026@bonus.x39zlzq.mongodb.net/NeonKafe?retryWrites=true&w=majority";
 
 // --- MONGODB BAĞLANTISI ---
 mongoose.connect(MONGO_URI, {
