@@ -7,15 +7,25 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const { Urun, Siparis, Rapor } = require('./models/Kafe'); // Model dosyanız
-
 // --- AYARLAR ---
 const ADMIN_PASS = process.env.ADMIN_PASS || '12345';
-const MONGO_URI = "mongodb+srv://neon_admin:Kafe2026@bonus.x39zlzq.mongodb.net/NeonKafe?retryWrites=true&w=majority";
-// --- MONGODB BAĞLANTISI ---
-mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Atlas Bağlantısı Başarılı"))
-    .catch(err => console.error("❌ Veritabanı Hatası:", err));
 
+// Senin yeni oluşturduğun neon_admin kullanıcısı ve şifresiyle güncellenmiş adres
+const MONGO_URI = "mongodb+srv://neon_admin:Kafe2026@bonus.x39zlzq.mongodb.net/NeonKafe?retryWrites=true&w=majority";
+
+// --- MONGODB BAĞLANTISI ---
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => {
+    console.log("✅ MongoDB Atlas Bağlantısı Başarılı");
+    console.log("📂 Veritabanı: NeonKafe");
+})
+.catch(err => {
+    console.error("❌ Veritabanı Hatası:", err.message);
+    console.log("👉 İpucu: Şifrenin veya IP izinlerinin (0.0.0.0/0) Atlas panelinde doğru olduğunu kontrol et.");
+});
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
