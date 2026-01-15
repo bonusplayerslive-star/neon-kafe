@@ -155,22 +155,38 @@
 
 <div class="modal fade" id="urunEkleModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border-secondary text-white">
+        <div class="modal-content bg-dark border-info text-white" style="border-radius: 20px; box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
             <form action="/admin/urun-ekle" method="POST">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title font-orbitron">YENİ ÜRÜN</h5>
+                    <h5 class="modal-title font-orbitron text-info"><i class="bi bi-plus-circle me-2"></i>YENİ ÜRÜN EKLE</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <input type="text" name="ad" class="form-control bg-transparent text-white mb-3" placeholder="Ürün Adı" required>
-                    <div class="row">
-                        <div class="col-6"><input type="number" name="fiyat" class="form-control bg-transparent text-white mb-3" placeholder="Satış" required></div>
-                        <div class="col-6"><input type="number" name="maliyet" class="form-control bg-transparent text-white mb-3" placeholder="Maliyet" required></div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-info font-orbitron">ÜRÜN ADI</label>
+                        <input type="text" name="ad" class="form-control bg-transparent text-white border-secondary" placeholder="Örn: Türk Kahvesi" required>
                     </div>
-                    <input type="number" name="stok" class="form-control bg-transparent text-white mb-3" placeholder="Stok" required>
+                    
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label small text-info font-orbitron">SATIŞ FİYATI (TL)</label>
+                            <input type="number" name="fiyat" step="0.01" class="form-control bg-transparent text-white border-secondary" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label small text-warning font-orbitron">MALİYET (TL)</label>
+                            <input type="number" name="maliyet" step="0.01" class="form-control bg-transparent text-white border-secondary" placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-info font-orbitron">BAŞLANGIÇ STOĞU</label>
+                        <input type="number" name="stok" class="form-control bg-transparent text-white border-secondary" placeholder="Adet giriniz" required>
+                    </div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="submit" class="btn btn-info w-100">KAYDET</button>
+                    <button type="submit" class="btn btn-info w-100 py-3 fw-bold font-orbitron shadow-sm">
+                        <i class="bi bi-save me-2"></i>DEPOYA KAYDET
+                    </button>
                 </div>
             </form>
         </div>
