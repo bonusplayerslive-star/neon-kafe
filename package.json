@@ -1,10 +1,10 @@
 {
   "name": "kafe-otomasyon",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Neon Kafe Otomasyon Sistemi",
+  "main": "server.js",
   "scripts": {
-   "start": "node server.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -12,7 +12,7 @@
   "dependencies": {
     "ejs": "^3.1.10",
     "express": "^5.2.1",
-    "lowdb": "^1.0.0",
+    "mongoose": "^8.9.5",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.3"
   }
