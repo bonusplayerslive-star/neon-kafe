@@ -4,15 +4,18 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const mongoose = require('mongoose');
 const path = require('path');
-const fs = require('fs');
 const { Urun, Siparis, Rapor } = require('./models/Kafe');
 
+// --- AYARLAR ---
 const ADMIN_PASS = process.env.ADMIN_PASS || '12345';
 const MONGO_URI = "mongodb+srv://neon_admin:Kafe2026@bonus.x39zlzq.mongodb.net/NeonKafe?retryWrites=true&w=majority";
 
-// MongoDB Bağlantısı
+// --- MONGODB BAĞLANTISI ---
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Atlas Bağlantısı Başarılı"))
+    .then(() => {
+        console.log("✅ MongoDB Atlas Bağlantısı Başarılı");
+        console.log("📂 Veritabanı: NeonKafe");
+    })
     .catch(err => console.error("❌ Veritabanı Hatası:", err.message));
 
 app.set('view engine', 'ejs');
@@ -30,7 +33,7 @@ async function rakamlariGuncelle() {
             kar += parseFloat(r.kar || 0);
         });
         io.emit('rakamGuncelleme', { ciro, kar });
-    } catch (err) { console.error("Rakam hatası:", err); }
+    } catch (err) { console.error("Rakam güncelleme hatası:", err); }
 }
 
 // --- ROTALAR ---
@@ -39,7 +42,7 @@ app.get(['/', '/menu/:masaNo'], async (req, res) => {
         const masaNo = req.params.masaNo || '0';
         const urunler = await Urun.find({ stok: { $gt: 0 } });
         res.render('menu', { masaNo, urunler });
-    } catch (err) { res.status(500).send("Hata"); }
+    } catch (err) { res.status(500).send("Menü yüklenemedi."); }
 });
 
 app.get('/admin', async (req, res) => {
@@ -47,17 +50,16 @@ app.get('/admin', async (req, res) => {
         const urunler = await Urun.find();
         const siparisler = await Siparis.find().sort({ _id: -1 });
         res.render('admin', { urunler, siparisler, adminPass: ADMIN_PASS });
-    } catch (err) { res.status(500).send("Hata"); }
+    } catch (err) { res.status(500).send("Admin paneli yüklenemedi."); }
 });
 
 app.post('/admin/urun-ekle', async (req, res) => {
     try {
-        const { ad, fiyat, maliyet, stok } = req.body;
         await Urun.create({
-            ad,
-            fiyat: parseFloat(fiyat) || 0,
-            maliyet: parseFloat(maliyet) || 0,
-            stok: parseInt(stok) || 0
+            ad: req.body.ad,
+            fiyat: parseFloat(req.body.fiyat),
+            maliyet: parseFloat(req.body.maliyet),
+            stok: parseInt(req.body.stok)
         });
         res.redirect('/admin');
     } catch (err) { res.redirect('/admin'); }
@@ -66,16 +68,16 @@ app.post('/admin/urun-ekle', async (req, res) => {
 // --- SOCKET.IO İLETİŞİMİ ---
 io.on('connection', (socket) => {
 
-    // Admin girişi: Bekleyenleri tek tek gönderir
+    // Admin Giriş Yaptığında Mevcut Durumu Gönder
     socket.on('admin_giris', async () => {
         try {
             await rakamlariGuncelle();
             const bekleyenler = await Siparis.find({ durum: 'bekliyor' }).sort({ _id: 1 });
             
             bekleyenler.forEach(s => {
-                const data = s.toObject();
-                data.id = s._id.toString(); 
-                socket.emit('yeniSiparisBildirimi', data);
+                const sData = s.toObject();
+                sData.id = s._id.toString(); 
+                socket.emit('yeniSiparisBildirimi', sData);
             });
 
             const aktifler = await Siparis.find();
@@ -84,18 +86,21 @@ io.on('connection', (socket) => {
         } catch (err) { console.error(err); }
     });
 
-    // Müşteri menüden sipariş verdiğinde
+    // Müşteri Sipariş Verdiğinde (Her ürün tek tek mutfağa düşer)
     socket.on('yeni_siparis', async (data) => {
         try {
             const { masa, urunler: sepet } = data;
+            
             for (const item of sepet) {
                 const urunDb = await Urun.findOne({ ad: item.ad });
                 if (urunDb) {
+                    // Stok düşür
                     if (urunDb.stok > 0) {
                         urunDb.stok -= 1;
                         await urunDb.save();
                     }
 
+                    // Siparişi kaydet
                     const yeniSiparis = await Siparis.create({
                         masaNo: masa.toString(),
                         urunAd: item.ad,
@@ -105,58 +110,67 @@ io.on('connection', (socket) => {
                         durum: 'bekliyor'
                     });
 
+                    // Admin paneline (mutfağa) gönder
                     const emitData = yeniSiparis.toObject();
                     emitData.id = yeniSiparis._id.toString();
-
-                    // HER SİPARİŞİ TÜM ADMİNLERE GÖNDER
                     io.emit('yeniSiparisBildirimi', emitData);
-                    io.emit('masa_durum_guncelle', { masaNo: masa, durum: 'dolu' });
                 }
             }
-        } catch (err) { console.error("Sipariş Hatası:", err); }
+            // Masayı dolu olarak işaretle
+            io.emit('masa_durum_guncelle', { masaNo: masa, durum: 'dolu' });
+        } catch (err) { console.error("Sipariş işleme hatası:", err); }
     });
 
     // ÇÖKMEYİ ENGELLEYEN KRİTİK GÜVENLİK KONTROLÜ
     socket.on('siparis_teslim_edildi', async (id) => {
-        // Eğer ID yoksa, string olarak "undefined" ise veya MongoDB ID formatına uymuyorsa DURDUR
         if (!id || id === "undefined" || !mongoose.Types.ObjectId.isValid(id)) {
-            console.log("⚠️ Geçersiz ID engellendi, çökme önlendi:", id);
+            console.log("⚠️ Geçersiz ID engellendi:", id);
             return;
         }
 
         try {
             const sonuc = await Siparis.findByIdAndUpdate(id, { durum: 'teslim_edildi' });
             if (sonuc) {
-                io.emit('siparis_teslim_onayi', id); 
+                io.emit('siparis_teslim_onayi', id);
             }
         } catch (err) { console.error("Teslimat hatası:", err); }
     });
 
     socket.on('masa_detay_iste', async (masaNo) => {
-        const masaninSiparisleri = await Siparis.find({ masaNo: masaNo.toString() });
-        socket.emit('masa_detay_verisi', { masaNo, siparisler: masaninSiparisleri });
+        const siparisler = await Siparis.find({ masaNo: masaNo.toString() });
+        socket.emit('masa_detay_verisi', { masaNo, siparisler });
     });
 
     socket.on('hesap_kapat', async (masaNo) => {
         try {
-            const masaninSiparisleri = await Siparis.find({ masaNo: masaNo.toString() });
-            if (masaninSiparisleri.length > 0) {
-                for (const s of masaninSiparisleri) {
-                    await Rapor.create({
-                        tarih: new Date().toLocaleDateString('tr-TR'),
-                        saat: new Date().toLocaleTimeString('tr-TR'),
-                        masa: s.masaNo,
-                        urun: s.urunAd,
-                        tutar: s.fiyat,
-                        kar: s.fiyat - (s.maliyet || 0)
-                    });
-                }
-                await Siparis.deleteMany({ masaNo: masaNo.toString() });
-                await rakamlariGuncelle();
-                io.emit('masa_sifirla', masaNo);
-                io.emit('masa_durum_guncelle', { masaNo: masaNo, durum: 'bos' });
+            const siparisler = await Siparis.find({ masaNo: masaNo.toString() });
+            for (const s of siparisler) {
+                await Rapor.create({
+                    tarih: new Date().toLocaleDateString('tr-TR'),
+                    saat: new Date().toLocaleTimeString('tr-TR'),
+                    masa: s.masaNo,
+                    urun: s.urunAd,
+                    tutar: s.fiyat,
+                    kar: s.fiyat - (s.maliyet || 0)
+                });
             }
+            await Siparis.deleteMany({ masaNo: masaNo.toString() });
+            await rakamlariGuncelle();
+            io.emit('masa_sifirla', masaNo);
+            io.emit('masa_durum_guncelle', { masaNo, durum: 'bos' });
         } catch (err) { console.error(err); }
+    });
+
+    socket.on('urun_sil', async (id) => {
+        if (id && mongoose.Types.ObjectId.isValid(id)) {
+            await Urun.findByIdAndDelete(id);
+        }
+    });
+
+    socket.on('stok_guncelle', async (data) => {
+        if (data.id && mongoose.Types.ObjectId.isValid(data.id)) {
+            await Urun.findByIdAndUpdate(data.id, { stok: data.stok });
+        }
     });
 });
 
