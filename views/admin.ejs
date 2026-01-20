@@ -345,6 +345,20 @@
         alert("Gün kapatıldı."); 
         location.reload(); 
     });
+// Sunucudan gelen teslim onayı ile ekranı güncelle
+socket.on('siparis_teslim_onayi', (id) => {
+    const kart = document.getElementById(`siparis-${id}`);
+    if(kart) {
+        kart.classList.add('teslim');
+        kart.querySelector('button')?.remove();
+        // Eğer çek işareti eklemek istersen:
+        if(!kart.querySelector('.bi-check2-all')) {
+            kart.querySelector('.d-flex').insertAdjacentHTML('beforeend', '<i class="bi bi-check2-all text-success fs-4"></i>');
+        }
+    }
+});
+
+
 </script>
 </body>
 </html>
