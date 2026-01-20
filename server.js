@@ -92,19 +92,32 @@ app.post('/admin/urun-ekle', async (req, res) => {
     }
 });
 
-// --- SOCKET.IO İLETİŞİMİ ---
+// --- SOCKET.IO İLETİŞİMİ GÜNCELLEME (TAM HALİ) ---
 io.on('connection', (socket) => {
 
+    // Admin Paneli Açıldığında veya Yenilendiğinde
     socket.on('admin_giris', async () => {
-        await rakamlariGuncelle();
-        const aktifler = await Siparis.find();
-        
-        aktifler.forEach(s => socket.emit('yeniSiparisBildirimi', s));
+        try {
+            await rakamlariGuncelle();
+            
+            // Veritabanındaki tüm aktif (henüz raporlanmamış) siparişleri getir
+            const aktifler = await Siparis.find().sort({ _id: 1 });
+            
+            aktifler.forEach(s => {
+                // MongoDB _id'sini frontend'in beklediği 'id' formatına çeviriyoruz
+                const siparisData = s.toObject();
+                siparisData.id = s._id.toString(); 
+                socket.emit('yeniSiparisBildirimi', siparisData);
+            });
 
-        const doluMasalar = [...new Set(aktifler.map(s => s.masaNo))];
-        doluMasalar.forEach(mNo => {
-            socket.emit('masa_durum_guncelle', { masaNo: mNo, durum: 'dolu' });
-        });
+            // Mevcut siparişlere göre masaların doluluk durumunu belirle
+            const doluMasalar = [...new Set(aktifler.map(s => s.masaNo))];
+            doluMasalar.forEach(mNo => {
+                socket.emit('masa_durum_guncelle', { masaNo: mNo, durum: 'dolu' });
+            });
+        } catch (err) {
+            console.error("Admin giriş yükleme hatası:", err);
+        }
     });
 
     socket.on('urun_sil', async (id) => {
@@ -115,20 +128,22 @@ io.on('connection', (socket) => {
         await Urun.findByIdAndUpdate(data.id, { stok: data.stok });
     });
 
+    // Müşteri Menüsünden Yeni Sipariş Geldiğinde
     socket.on('yeni_siparis', async (data) => {
         const { masa, urunler: sepet } = data;
 
         for (const item of sepet) {
             const urunDb = await Urun.findOne({ ad: item.ad });
             if (urunDb) {
-                // Stok düşür
+                // Stok Kontrolü ve Düşümü
                 if (urunDb.stok > 0) {
                     urunDb.stok -= 1;
                     await urunDb.save();
                 }
 
+                // Siparişi MongoDB'ye Kaydet
                 const yeniSiparis = await Siparis.create({
-                    masaNo: masa,
+                    masaNo: masa.toString(),
                     urunAd: item.ad,
                     fiyat: urunDb.fiyat,
                     maliyet: urunDb.maliyet,
@@ -136,14 +151,25 @@ io.on('connection', (socket) => {
                     durum: 'bekliyor'
                 });
 
-                io.emit('yeniSiparisBildirimi', yeniSiparis);
+                // Frontend için ID eşlemesi yapıp tüm adminlere gönder
+                const emitData = yeniSiparis.toObject();
+                emitData.id = yeniSiparis._id.toString();
+
+                io.emit('yeniSiparisBildirimi', emitData);
                 io.emit('masa_durum_guncelle', { masaNo: masa, durum: 'dolu' });
             }
         }
     });
 
+    // Mutfak "Teslim Et"e Bastığında
     socket.on('siparis_teslim_edildi', async (id) => {
-        await Siparis.findByIdAndUpdate(id, { durum: 'teslim_edildi' });
+        try {
+            await Siparis.findByIdAndUpdate(id, { durum: 'teslim_edildi' });
+            // Diğer açık admin panellerinde de siparişi teslim edildi olarak işaretle
+            io.emit('siparis_teslim_onayi', id); 
+        } catch (err) {
+            console.error("Teslimat güncelleme hatası:", err);
+        }
     });
 
     socket.on('masa_detay_iste', async (masaNo) => {
@@ -151,6 +177,7 @@ io.on('connection', (socket) => {
         socket.emit('masa_detay_verisi', { masaNo, siparisler: masaninSiparisleri });
     });
 
+    // Hesap Kapatma (Siparişleri Rapora Aktarır ve Masayı Boşaltır)
     socket.on('hesap_kapat', async (masaNo) => {
         const masaninSiparisleri = await Siparis.find({ masaNo: masaNo.toString() });
         
@@ -165,43 +192,53 @@ io.on('connection', (socket) => {
                     kar: parseFloat(s.fiyat) - parseFloat(s.maliyet || 0)
                 });
             }
+            // Masadaki aktif siparişleri sil ve arayüzü güncelle
             await Siparis.deleteMany({ masaNo: masaNo.toString() });
             await rakamlariGuncelle();
+            
             io.emit('masa_sifirla', masaNo);
             io.emit('masa_durum_guncelle', { masaNo: masaNo, durum: 'bos' });
         }
     });
 
+    // Gün Sonu İşlemi
     socket.on('gunu_kapat', async () => {
-        const tumRaporlar = await Rapor.find();
-        if (tumRaporlar.length === 0) return;
+        try {
+            const tumRaporlar = await Rapor.find();
+            if (tumRaporlar.length === 0) return;
 
-        const simdi = new Date();
-        const dosyaAdi = `Rapor-${simdi.getDate()}-${simdi.getMonth() + 1}-${simdi.getFullYear()}.txt`;
-        const klasorYolu = path.join(__dirname, 'hesap');
+            const simdi = new Date();
+            const dosyaAdi = `Rapor-${simdi.getDate()}-${simdi.getMonth() + 1}-${simdi.getFullYear()}.txt`;
+            const klasorYolu = path.join(__dirname, 'hesap');
 
-        if (!fs.existsSync(klasorYolu)) fs.mkdirSync(klasorYolu);
+            if (!fs.existsSync(klasorYolu)) fs.mkdirSync(klasorYolu);
 
-        let icerik = `--- GÜN SONU RAPORU ---\n\n`;
-        let ciro = 0, kar = 0;
-        
-        tumRaporlar.forEach(r => {
-            icerik += `[${r.saat}] Masa ${r.masa}: ${r.urun} | ${r.tutar} TL\n`;
-            ciro += r.tutar; 
-            kar += r.kar;
-        });
-        
-        icerik += `\nTOPLAM CİRO: ${ciro.toFixed(2)} TL\nTOPLAM KAR: ${kar.toFixed(2)} TL`;
+            let icerik = `--- GÜN SONU RAPORU ---\n\n`;
+            let ciro = 0, kar = 0;
+            
+            tumRaporlar.forEach(r => {
+                icerik += `[${r.saat}] Masa ${r.masa}: ${r.urun} | ${r.tutar} TL\n`;
+                ciro += r.tutar; 
+                kar += r.kar;
+            });
+            
+            icerik += `\nTOPLAM CİRO: ${ciro.toFixed(2)} TL\nTOPLAM KAR: ${kar.toFixed(2)} TL`;
 
-        fs.writeFileSync(path.join(klasorYolu, dosyaAdi), icerik);
-        
-        // Verileri temizle
-        await Rapor.deleteMany({});
-        await Siparis.deleteMany({});
-        
-        await rakamlariGuncelle();
-        io.emit('gun_kapatildi_onayi');
-        io.emit('tum_masalari_temizle');
+            fs.writeFileSync(path.join(klasorYolu, dosyaAdi), icerik);
+            
+            // Tüm geçici verileri temizle
+            await Rapor.deleteMany({});
+            await Siparis.deleteMany({});
+            
+            await rakamlariGuncelle();
+            io.emit('gun_kapatildi_onayi');
+            // Tüm ekranlardaki masaları boşalt
+            for(let i=1; i<=24; i++) {
+                io.emit('masa_durum_guncelle', { masaNo: i, durum: 'bos' });
+            }
+        } catch (err) {
+            console.error("Günü kapatma hatası:", err);
+        }
     });
 });
 
