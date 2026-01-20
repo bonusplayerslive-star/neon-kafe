@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Kafe | Menü</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0d0d0d; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .neon-card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; transition: 0.3s; cursor: pointer; }
+        .neon-card:hover { border-color: #00f3ff; box-shadow: 0 0 10px #00f3ff; }
+        .sepet-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 500px; 
+                     background: rgba(0, 243, 255, 0.9); color: black; border-radius: 50px; display: none; z-index: 1000; }
+        .urun-img { width: 60px; height: 60px; object-fit: cover; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container py-4">
+        <header class="text-center mb-5">
+            <h1 class="display-5 fw-bold text-info">NEON KAFE</h1>
+            <p class="text-muted">Masa: <span id="masaNoGoster">..</span></p>
+        </header>
+
+        <div class="row g-3">
+            <% urunler.forEach(urun => { %>
+                <div class="col-6 col-md-4">
+                    <div class="neon-card p-3 h-100" onclick="sepeteEkle('<%= urun.ad %>', <%= urun.fiyat %>)">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1"><%= urun.ad %></h6>
+                                <span class="text-info fw-bold"><%= urun.fiyat %> TL</span>
+                            </div>
+                            <% if(urun.stok <= 5) { %>
+                                <span class="badge bg-danger">Son <%= urun.stok %></span>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <div id="sepetBar" class="sepet-bar p-3 shadow-lg" onclick="siparisVer()">
+        <div class="d-flex justify-content-between align-items-center px-3">
+            <span class="fw-bold" id="sepetAdet">0 Ürün</span>
+            <span class="fw-bold">SİPARİŞİ TAMAMLA</span>
+            <span class="fw-bold" id="sepetToplam">0.00 TL</span>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Render 503 hatalarını önlemek için WebSocket öncelikli bağlantı
+        const socket = io({
+            transports: ['websocket', 'polling']
+        });
+
+        // URL'den Masa Numarasını Al (Örn: /menu?masa=12)
+        const urlParams = new URLSearchParams(window.location.search);
+        const masaNo = urlParams.get('masa') || "Bilinmiyor";
+        document.getElementById('masaNoGoster').innerText = masaNo;
+
+        let sepet = [];
+
+        function sepeteEkle(ad, fiyat) {
+            sepet.push({ ad, fiyat });
+            guncelleSepetBar();
+            // Hafif bir geri bildirim
+            const bar = document.getElementById('sepetBar');
+            bar.style.transform = "translateX(-50%) scale(1.05)";
+            setTimeout(() => bar.style.transform = "translateX(-50%) scale(1)", 100);
+        }
+
+        function guncelleSepetBar() {
+            const bar = document.getElementById('sepetBar');
+            if (sepet.length > 0) {
+                bar.style.display = 'block';
+                document.getElementById('sepetAdet').innerText = sepet.length + " Ürün";
+                const toplam = sepet.reduce((sum, item) => sum + item.fiyat, 0);
+                document.getElementById('sepetToplam').innerText = toplam.toFixed(2) + " TL";
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function siparisVer() {
+            if (masaNo === "Bilinmiyor") {
+                Swal.fire("Hata", "Masa numarası bulunamadı. Lütfen QR kodu tekrar okutun.", "error");
+                return;
+            }
+
+            Swal.fire({
+                title: 'Sipariş Onayı',
+                text: `${sepet.length} ürün mutfağa gönderilecek. Onaylıyor musunuz?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#00f3ff',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Evet, Gönder',
+                cancelButtonText: 'İptal',
+                background: '#1a1a1a',
+                color: '#fff'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Admin paneline (server.js üzerinden) gönderilecek veri paketi
+                    const siparisVerisi = {
+                        masa: masaNo,
+                        urunler: sepet
+                    };
+
+                    socket.emit('yeni_siparis', siparisVerisi);
+
+                    Swal.fire({
+                        title: 'Sipariş Alındı!',
+                        text: 'Ürünleriniz hazırlanmaya başladı.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: '#1a1a1a',
+                        color: '#fff'
+                    });
+
+                    sepet = [];
+                    guncelleSepetBar();
+                }
+            });
+        }
+
+        // Bağlantı koptuğunda otomatik yeniden bağlanma uyarısı (İsteğe bağlı)
+        socket.on('disconnect', () => {
+            console.log("Bağlantı koptu, yeniden deneniyor...");
+        });
+    </script>
+</body>
+</html>
