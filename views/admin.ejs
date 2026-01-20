@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Kafe | Admin Kontrol</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-turkuaz: #00f2ff;
+            --neon-pembe: #ff00de;
+            --dark-bg: #080808;
+            --card-bg: #121212;
+            --border-color: #222;
+        }
+
+        #adminLoginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--dark-bg); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .login-box {
+            background: var(--card-bg); padding: 30px; border-radius: 20px;
+            border: 2px solid var(--neon-turkuaz); box-shadow: 0 0 20px rgba(0,242,255,0.2);
+            width: 90%; max-width: 400px; text-align: center;
+        }
+
+        body { 
+            background-color: var(--dark-bg); color: #ffffff;
+            font-family: 'Rajdhani', sans-serif; height: 100vh;
+        }
+
+        .font-orbitron { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+        .stats-header { background: rgba(0, 0, 0, 0.8); border-bottom: 1px solid var(--border-color); padding: 15px 0; backdrop-filter: blur(10px); }
+        .stat-box { border-left: 2px solid var(--neon-turkuaz); padding-left: 15px; }
+        .stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+        .stat-value { font-size: 1.3rem; font-weight: bold; color: var(--neon-turkuaz); text-shadow: 0 0 10px rgba(0, 242, 255, 0.3); }
+        .panel-container { height: calc(100vh - 85px); }
+        .panel-column { height: 100%; overflow-y: auto; padding: 20px; border-right: 1px solid var(--border-color); }
+        .neon-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .masa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 12px; }
+        .masa-box { background: var(--card-bg); border: 1px solid var(--border-color); aspect-ratio: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; transition: 0.3s; }
+        .masa-box.dolu { border-color: var(--neon-turkuaz); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); color: var(--neon-turkuaz); background: rgba(0, 242, 255, 0.05); }
+        .siparis-item { border-left: 4px solid #ffc107; transition: 0.5s; }
+        .siparis-item.teslim { border-left-color: #198754; opacity: 0.5; }
+    </style>
+</head>
+<body>
+
+<div id="adminLoginOverlay">
+    <div class="login-box">
+        <h3 class="font-orbitron text-info mb-4">NEON ADMIN</h3>
+        <input type="password" id="adminPassInput" class="form-control bg-transparent text-white border-info mb-3" placeholder="Şifreyi Girin">
+        <button onclick="checkAdminPass()" class="btn btn-info w-100 fw-bold">GİRİŞ YAP</button>
+        <p id="loginError" class="text-danger mt-2 small" style="display:none;">Hatalı Şifre!</p>
+    </div>
+</div>
+
+<div id="adminMainContent" style="display:none;">
+    <div class="stats-header shadow-lg">
+        <div class="container-fluid px-4">
+            <div class="row align-items-center">
+                <div class="col-6 col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-label">Günlük Ciro</div>
+                        <div id="toplam-ciro" class="stat-value font-orbitron">0.00 TL</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 d-none d-md-block">
+                    <div class="stat-box" style="border-left-color: var(--neon-pembe)">
+                        <div class="stat-label">Tahmini Kar</div>
+                        <div id="toplam-kar" class="stat-value font-orbitron" style="color: var(--neon-pembe)">0.00 TL</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-6 text-end">
+                    <button onclick="cikisYap()" class="btn btn-outline-info btn-sm me-2">ÇIKIŞ</button>
+                    <button onclick="gunuKapat()" class="btn btn-outline-danger font-orbitron btn-sm px-4">
+                        <i class="bi bi-power"></i> GÜNÜ KAPAT
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid panel-container">
+        <div class="row h-100 g-0">
+            <div class="col-12 col-md-3 panel-column">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="font-orbitron m-0"><i class="bi bi-box-seam me-2"></i>DEPO</h5>
+                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#urunEkleModal"><i class="bi bi-plus-lg"></i></button>
+                </div>
+                <div id="depo-listesi">
+                    <% urunler.forEach(u => { %>
+                        <div class="neon-card" id="urun-kart-<%= u.id %>">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="fw-bold fs-5"><%= u.ad %></div>
+                                    <div class="text-info small"><%= u.fiyat %> TL</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="btn btn-sm btn-outline-info mb-2" onclick="stokGuncellePrompt('<%= u.id %>', '<%= u.ad %>', '<%= u.stok %>')">
+                                        <%= u.stok %> Adet
+                                    </div>
+                                    <button class="btn btn-sm text-danger d-block w-100" onclick="urunSil('<%= u.id %>', '<%= u.ad %>')"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-5 panel-column bg-black bg-opacity-25">
+                <h5 class="font-orbitron mb-4 text-center"><i class="bi bi-fire me-2"></i>MUTFAK AKIŞI</h5>
+                <div id="siparis-konteynir">
+                    <% siparisler.forEach(s => { %>
+                        <div class="neon-card siparis-item <%= s.durum !== 'bekliyor' ? 'teslim' : '' %>" id="siparis-<%= s._id %>">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-warning text-dark me-2">MASA <%= s.masaNo %></span>
+                                    <span class="fw-bold text-white"><%= s.urunAd %></span>
+                                    <div class="small text-muted"><%= s.zaman %></div>
+                                </div>
+                                <% if(s.durum === 'bekliyor') { %>
+                                    <button class="btn btn-sm btn-outline-success" onclick="teslimEt('<%= s._id %>')">TESLİM ET</button>
+                                <% } else { %>
+                                    <i class="bi bi-check2-all text-success fs-4"></i>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-4 panel-column border-0">
+                <h5 class="font-orbitron mb-4 text-center"><i class="bi bi-grid-3x3-gap me-2"></i>MASALAR</h5>
+                <div class="masa-grid">
+                    <% for(let i=1; i<=24; i++) { %>
+                        <div id="masa-<%= i %>" class="masa-box" onclick="masaDetay('<%= i %>')">
+                            <div class="stat-label">MASA</div>
+                            <div class="fs-4 fw-bold"><%= i %></div>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adisyonModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-info text-white" style="border-radius: 20px;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title font-orbitron text-info" id="adisyonMasaNo">MASA DETAYI</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="adisyonIcerik"></div>
+                <div class="d-flex justify-content-between mt-4 p-3 bg-info bg-opacity-10 rounded">
+                    <span class="fs-5 font-orbitron">TOPLAM:</span>
+                    <span class="fs-3 fw-bold text-info" id="adisyonToplam">0.00 TL</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-info w-100 py-3 fw-bold" id="btnHesapOnay">HESABI KAPAT</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="urunEkleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-info text-white" style="border-radius: 20px;">
+            <form action="/admin/urun-ekle" method="POST">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title font-orbitron text-info">YENİ ÜRÜN EKLE</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-info">ÜRÜN ADI</label>
+                        <input type="text" name="ad" class="form-control bg-transparent text-white border-secondary" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label small text-info">SATIŞ FİYATI</label>
+                            <input type="number" name="fiyat" step="0.01" class="form-control bg-transparent text-white border-secondary" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label small text-warning">MALİYET</label>
+                            <input type="number" name="maliyet" step="0.01" class="form-control bg-transparent text-white border-secondary" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-info">STOK</label>
+                        <input type="number" name="stok" class="form-control bg-transparent text-white border-secondary" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="submit" class="btn btn-info w-100 py-3 fw-bold">KAYDET</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const socket = io();
+    let adisyonModal;
+    let seciliMasa = null;
+    const GERCEK_SIFRE = "<%= typeof adminPass !== 'undefined' ? adminPass : '12345' %>";
+
+    function checkAdminPass() {
+        const girilen = document.getElementById('adminPassInput').value;
+        if (girilen === GERCEK_SIFRE) {
+            localStorage.setItem('adminSifre', girilen);
+            adminPaneliAc();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function adminPaneliAc() {
+        document.getElementById('adminLoginOverlay').style.display = 'none';
+        document.getElementById('adminMainContent').style.display = 'block';
+        socket.emit('admin_giris');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        adisyonModal = new bootstrap.Modal(document.getElementById('adisyonModal'));
+        if(localStorage.getItem('adminSifre') === GERCEK_SIFRE) adminPaneliAc();
+    });
+
+    // --- SOCKET DİNLEYİCİLERİ ---
+    // admin.ejs içindeki socket.on('yeniSiparisBildirimi'...) kısmı
+socket.on('yeniSiparisBildirimi', (s) => {
+    const liste = document.getElementById('siparis-konteynir'); // HTML'deki ID ile aynı olmalı
+    const id = s.id || s._id;
+
+    // Eğer sipariş zaten ekranda varsa (sayfa yenilendiğinde çift olmasın diye) durdur
+    if (!id || document.getElementById(`siparis-${id}`)) return;
+
+    // Sadece BEKLİYOR durumundakileri akışta göster (isteğine göre)
+    if (s.durum !== 'bekliyor') return;
+
+    const div = document.createElement('div');
+    div.className = `neon-card siparis-item animate__animated animate__fadeInLeft`; // Animasyon ekledik
+    div.id = `siparis-${id}`;
+    div.style.borderLeft = "4px solid #ffc107"; // Bekliyor rengi
+    
+    div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-warning text-dark me-2">MASA ${s.masaNo}</span>
+                <strong class="text-white">${s.urunAd}</strong>
+                <div class="text-muted small" style="font-size: 0.7rem;">${s.zaman || ''}</div>
+            </div>
+            <div class="islem-butonlari">
+                <button class="btn btn-sm btn-outline-success fw-bold" 
+                        onclick="teslimEt('${id}')">
+                    TESLİM ET
+                </button>
+            </div>
+        </div>`;
+
+    // Yeni gelen siparişi listenin en üstüne ekle
+    liste.prepend(div);
+    
+    // Masa kutusunu mavi (dolu) yap
+    const masaKutusu = document.getElementById(`masa-${s.masaNo}`);
+    if (masaKutusu) masaKutusu.classList.add('dolu');
+});
+
+// Teslim et onayı geldiğinde kartı akıştan kaldır
+socket.on('siparis_teslim_onayi', (id) => {
+    const kart = document.getElementById(`siparis-${id}`);
+    if (kart) {
+        // Kartı ekrandan yavaşça kaldır (görsel şölen için)
+        kart.style.opacity = '0';
+        setTimeout(() => {
+            kart.remove();
+        }, 300);
+    }
+});
+    socket.on('siparis_teslim_onayi', (id) => {
+        const kart = document.getElementById(`siparis-${id}`);
+        if(kart) {
+            kart.classList.add('teslim');
+            const alan = kart.querySelector('.buton-alani');
+            if(alan) alan.innerHTML = '<i class="bi bi-check2-all text-success fs-4"></i>';
+        }
+    });
+
+    function teslimEt(id) { socket.emit('siparis_teslim_edildi', id); }
+
+    function masaDetay(masaNo) { socket.emit('masa_detay_iste', masaNo); }
+
+    socket.on('masa_detay_verisi', (data) => {
+        seciliMasa = data.masaNo;
+        const liste = document.getElementById('adisyonIcerik');
+        liste.innerHTML = "";
+        let toplam = 0;
+
+        if (data.siparisler && data.siparisler.length > 0) {
+            data.siparisler.forEach(s => {
+                toplam += s.fiyat;
+                const icon = s.durum === 'teslim_edildi' ? 'bi-check2 text-success' : 'bi-clock text-warning';
+                liste.innerHTML += `<div class="d-flex justify-content-between mb-2">
+                    <span><i class="bi ${icon} me-2"></i>${s.urunAd}</span>
+                    <span>${s.fiyat} TL</span>
+                </div>`;
+            });
+            document.getElementById('adisyonMasaNo').innerText = `MASA ${data.masaNo} ADİSYON`;
+            document.getElementById('adisyonToplam').innerText = `${toplam.toFixed(2)} TL`;
+            adisyonModal.show();
+        } else { alert("Bu masa şu an boş."); }
+    });
+
+    document.getElementById('btnHesapOnay').onclick = () => {
+        if(confirm(`Masa ${seciliMasa} hesabı kapatılacak?`)) {
+            socket.emit('hesap_kapat', seciliMasa);
+            adisyonModal.hide();
+        }
+    };
+
+    socket.on('masa_sifirla', (masaNo) => {
+        document.getElementById(`masa-${masaNo}`)?.classList.remove('dolu');
+        document.querySelectorAll('.siparis-item').forEach(item => {
+            if(item.innerText.includes(`MASA ${masaNo}`)) item.remove();
+        });
+    });
+
+    socket.on('rakamGuncelleme', (d) => {
+        document.getElementById('toplam-ciro').innerText = d.ciro.toFixed(2) + " TL";
+        document.getElementById('toplam-kar').innerText = d.kar.toFixed(2) + " TL";
+    });
+
+    // Diğer (silme, stok, gün sonu) fonksiyonlarını olduğu gibi bırakabilirsin.
+</script>
+</body>
+</html>
